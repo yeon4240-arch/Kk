@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> 여행 플래너 ✈️</title>
+    <style>
+        :root {
+            --primary-color: #2a6fdb;
+            --secondary-color: #f1f5f9;
+            --accent-color: #ff4d4d;
+            --text-color: #1e293b;
+            --bg-color: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 16px;
+            padding-bottom: 60px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- 로그인 섹션 스타일 --- */
+        #auth-section {
+            max-width: 400px;
+            margin: 80px auto;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(241, 245, 249, 0.8);
+            text-align: center;
+        }
+
+        #auth-section h2 {
+            margin-bottom: 20px;
+            color: #0f172a;
+        }
+
+        .auth-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .auth-buttons button {
+            flex: 1;
+        }
+
+        .btn-signup {
+            background: #cbd5e1;
+            color: #334155;
+        }
+
+        /* --- 플래너 섹션 스타일 (초기 숨김) --- */
+        #planner-section {
+            display: none;
+        }
+
+        header {
+            text-align: center;
+            padding: 24px 0 16px 0;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        header p {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .logout-btn {
+            position: absolute;
+            right: 0;
+            top: 24px;
+            background: none;
+            color: #94a3b8;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(241, 245, 249, 0.8);
+        }
+
+        .section h2 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #0f172a;
+        }
+
+        /* 예산 계산기 스타일 */
+        .budget-setting, .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .budget-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        
+        .budget-box {
+            background: var(--secondary-color);
+            padding: 14px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .budget-box span { font-size: 12px; color: #64748b; font-weight: 500; }
+        .budget-box p { font-size: 18px; font-weight: 700; margin-top: 4px; }
+        .remains { color: var(--primary-color); }
+        
+        /* 공통 인풋 스타일 */
+        input, select, button {
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(42, 111, 219, 0.1);
+        }
+        
+        input[type="text"], input[type="number"], input[type="time"], input[type="password"] { flex: 1; }
+        
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        
+        button:active { transform: scale(0.98); opacity: 0.9; }
+
+        .expense-list {
+            list-style: none;
+            max-height: 160px;
+            overflow-y: auto;
+            font-size: 14px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 8px;
+        }
+        
+        .expense-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 4px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        /* 짐싸기 체크리스트 스타일 */
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 4px;
+            border-bottom: 1px solid #f8fafc;
+        }
+        
+        .check-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .editable-text {
+            flex: 1;
+            font-size: 14px;
+            color: #334155;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .editable-text:focus {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            outline: none;
+        }
+        
+        .check-item.done .editable-text {
+            text-decoration: line-through;
+            color: #94a3b8;
+        }
+
+        .delete-todo-btn {
+            background: none;
+            color: #ef4444;
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid #fee2e2;
+            background-color: #fef2f2;
+        }
+
+        /* 타임라인 플래너 스타일 */
+        .input-timeline-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: var(--secondary-color);
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .input-timeline-row { display: flex; gap: 8px; align-items: center; }
+        
+        input[type="file"] {
+            padding: 8px;
+            font-size: 12px;
+            background: white;
+            flex: 1;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 24px;
+            margin-top: 8px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 6px;
+            bottom: 6px;
+            width: 2px;
+            background: #e2e8f0;
+        }
+        
+        .timeline-item { position: relative; padding-bottom: 24px; }
+        .timeline-item:last-child { padding-bottom: 4px; }
+        
+        .timeline-item::after {
+            content: ''; position: absolute; left: -23px; top: 5px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--primary-color); border: 2px solid white;
+            box-shadow: 0 0 0 2px rgba(42, 111, 219, 0.2);
+        }
+        
+        .timeline-header { display: flex; justify-content: space-between; align-items: center; }
+        .time { font-size: 12px; font-weight: 700; color: var(--primary-color); margin-bottom: 2px; }
+        .location { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+        .memo { font-size: 13px; color: #64748b; line-height: 1.4; margin-bottom: 6px; }
+        
+        .timeline-photo {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .delete-timeline-btn {
+            background: none; color: #94a3b8; border: none;
+            padding: 2px 6px; font-size: 11px; font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 0. 로그인 / 회원가입 섹션 -->
+    <div id="auth-section">
+        <h2>여행 플래너 로그인 ✈️</h2>
+        <div class="auth-input-group">
+            <input type="text" id="auth-id" placeholder="아이디를 입력하세요">
+            <input type="password" id="auth-pw" placeholder="비밀번호를 입력하세요">
+        </div>
+        <div class="auth-buttons">
+            <button class="btn-signup" onclick="handleSignup()">회원가입</button>
+            <button onclick="handleLogin()">로그인</button>
+        </div>
+    </div>
+
+    <!-- 플래너 메인 섹션 (로그인 후 표시됨) -->
+    <div id="planner-section">
+        <header>
+            <h1>채연님의 오사카 여행 플래너 ✈️</h1>
+            <p>모바일 전용 올인원 플래너</p>
+            <button class="logout-btn" onclick="handleLogout()">로그아웃</button>
+        </header>
+
+        <!-- 1. 여행 예산 계산기 -->
+        <div class="section">
+            <h2>💰 예산 계산기 (환율 반영)</h2>
+            <div class="budget-setting">
+                <select id="currency" onchange="updateBudget()">
+                    <option value="1">원화 (₩)</option>
+                    <option value="9.0">일본 엔 (100엔 기준 ¥)</option>
+                    <option value="1370">미국 달러 ($)</option>
+                </select>
+                <input type="number" id="total-budget" value="500000" oninput="updateBudget()" placeholder="총 예산 입력">
+            </div>
+            
+            <div class="budget-summary">
+                <div class="budget-box">
+                    <span>사용한 금액</span>
+                    <p id="used-amount" style="color: var(--accent-color);">0</p>
+                </div>
+                <div class="budget-box">
+                    <span>남은 예산</span>
+                    <p id="remaining-amount" class="remains">0</p>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="expense-title" placeholder="내역 (예: 점심값)">
+                <input type="number" id="expense-cost" placeholder="금액">
+                <button onclick="addExpense()">추가</button>
+            </div>
+            <ul class="expense-list" id="expense-list"></ul>
+        </div>
+
+        <!-- 2. 짐싸기 체크리스트 (수정/삭제 가능) -->
+        <div class="section">
+            <h2>🧳 짐싸기 체크리스트</h2>
+            <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">* 텍스트를 터치하면 바로 수정할 수 있습니다.</p>
+            <div class="input-group">
+                <input type="text" id="todo-input" placeholder="새 준비물 추가...">
+                <button onclick="addTodo()">등록</button>
+            </div>
+            <div id="todo-list">
+                <div class="check-item">
+                    <input type="checkbox" onchange="toggleCheck(this)"> 
+                    <span class="editable-text" contenteditable="true">여권 및 항공권 바우처</span>
+                    <button class="delete-todo-btn" onclick="deleteTodo(this)">삭제</button>
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" onchange="toggleCheck(this)"> 
+                    <span class="editable-text" contenteditable="true">보조 배터리 & 멀티 어댑터</span>
+                    <button class="delete-todo-btn" onclick="deleteTodo(this)">삭제</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 1일 일정 플래너 (사진 추가 가능) -->
+        <div class="section">
+            <h2>📍 나만의 1일 일정 (타임라인)</h2>
+            
+            <div class="input-timeline-group">
+                <div class="input-timeline-row">
+                    <input type="time" id="timeline-time" value="12:00">
+                    <input type="text" id="timeline-location" placeholder="장소 또는 일정 이름">
+                </div>
+                <div class="input-timeline-row">
+                    <input type="text" id="timeline-memo" placeholder="간단한 메모 (선택)">
+                </div>
+                <div class="input-timeline-row">
+                    <input type="file" id="timeline-photo" accept="image/*">
+                    <button onclick="addTimelineItem()">일정 추가</button>
+                </div>
+            </div>
+
+            <div class="timeline" id="timeline">
+                <div class="timeline-item" data-time="16:00">
+                    <div class="timeline-header">
+                        <div class="time">16:00</div>
+                        <button class="delete-timeline-btn" onclick="deleteTimelineItem(this)">삭제</button>
+                    </div>
+                    <div class="location">소품샵 & 덕질 스팟 거리 구경 🛍️</div>
+                    <div class="memo">위시리스트에 적어둔 한정판 굿즈와 피규어 체크!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 0. 간결한 로그인 / 회원가입 로직 (로컬스토리지 활용) ---
+        function handleSignup() {
+            const id = document.getElementById('auth-id').value.trim();
+            const pw = document.getElementById('auth-pw').value.trim();
+            
+            if (!id || !pw) return alert("아이디와 비밀번호를 모두 입력해주세요.");
+            
+            const users = JSON.parse(localStorage.getItem('travel_users') || '{}');
+            if (users[id]) return alert("이미 존재하는 아이디입니다.");
+            
+            users[id] = pw;
+            localStorage.setItem('travel_users', JSON.stringify(users));
+            alert("회원가입이 완료되었습니다. 로그인해주세요!");
+            document.getElementById('auth-pw').value = '';
+        }
+
+        function handleLogin() {
+            const id = document.getElementById('auth-id').value.trim();
+            const pw = document.getElementById('auth-pw').value.trim();
+            
+            const users = JSON.parse(localStorage.getItem('travel_users') || '{}');
+            
+            if (users[id] && users[id] === pw) {
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('planner-section').style.display = 'block';
+                updateBudget(); // 로그인 시 예산 로드
+            } else {
+                alert("아이디 또는 비밀번호가 일치하지 않습니다.");
+            }
+        }
+
+        function handleLogout() {
+            document.getElementById('auth-id').value = '';
+            document.getElementById('auth-pw').value = '';
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('planner-section').style.display = 'none';
+        }
+
+        // --- 1. 예산 계산기 로직 ---
+        let totalExpense = 0;
+
+        function updateBudget() {
+            const rate = parseFloat(document.getElementById('currency').value);
+            const totalBudget = parseFloat(document.getElementById('total-budget').value) || 0;
+            
+            let usedCalculated = rate === 9.0 ? (totalExpense / 100) * rate : totalExpense * rate;
+            const remaining = totalBudget - usedCalculated;
+            
+            document.getElementById('used-amount').innerText = usedCalculated.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' 원';
+            document.getElementById('remaining-amount').innerText = remaining.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' 원';
+        }
+
+        function addExpense() {
+            const titleInput = document.getElementById('expense-title');
+            const costInput = document.getElementById('expense-cost');
+            const currencySelect = document.getElementById('currency');
+            const selectedCurrencyText = currencySelect.options[currencySelect.selectedIndex].text.split(' ')[0];
+            
+            if(!titleInput.value || !costInput.value) return;
+
+            const cost = parseFloat(costInput.value);
+            totalExpense += cost;
+
+            const li = document.createElement('li');
+            li.className = 'expense-item';
+            li.innerHTML = `<span>${titleInput.value}</span> <span>${cost.toLocaleString()} ${selectedCurrencyText.includes('원화') ? '원' : selectedCurrencyText.includes('엔') ? '엔' : '$'}</span>`;
+            document.getElementById('expense-list').appendChild(li);
+
+            titleInput.value = '';
+            costInput.value = '';
+            updateBudget();
+        }
+
+        // --- 2. 체크리스트 로직 (수정/삭제 가능) ---
+        function toggleCheck(checkbox) {
+            const itemDiv = checkbox.closest('.check-item');
+            if(checkbox.checked) {
+                itemDiv.classList.add('done');
+            } else {
+                itemDiv.classList.remove('done');
+            }
+        }
+
+        function deleteTodo(btn) {
+            btn.closest('.check-item').remove();
+        }
+
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            if(!input.value) return;
+
+            const div = document.createElement('div');
+            div.className = 'check-item';
+            div.innerHTML = `
+                <input type="checkbox" onchange="toggleCheck(this)"> 
+                <span class="editable-text" contenteditable="true">${input.value}</span>
+                <button class="delete-todo-btn" onclick="deleteTodo(this)">삭제</button>
+            `;
+            
+            document.getElementById('todo-list').appendChild(div);
+            input.value = '';
+        }
+
+        // --- 3. 타임라인 플래너 로직 (사진 추가) ---
+        function addTimelineItem() {
+            const timeInput = document.getElementById('timeline-time');
+            const locationInput = document.getElementById('timeline-location');
+            const memoInput = document.getElementById('timeline-memo');
+            const photoInput = document.getElementById('timeline-photo');
+
+            if (!locationInput.value) {
+                alert('장소 또는 일정 이름을 입력해 주세요.');
+                return;
+            }
+
+            // 사진 첨부 처리
+            let photoHtml = '';
+            if (photoInput.files && photoInput.files[0]) {
+                const imageUrl = URL.createObjectURL(photoInput.files[0]);
+                photoHtml = `<img src="${imageUrl}" class="timeline-photo" alt="일정 사진">`;
+            }
+
+            const timeline = document.getElementById('timeline');
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            item.setAttribute('data-time', timeInput.value);
+            
+            item.innerHTML = `
+                <div class="timeline-header">
+                    <div class="time">${timeInput.value}</div>
+                    <button class="delete-timeline-btn" onclick="deleteTimelineItem(this)">삭제</button>
+                </div>
+                <div class="location">${locationInput.value}</div>
+                <div class="memo">${memoInput.value || ''}</div>
+                ${photoHtml}
+            `;
+
+            timeline.appendChild(item);
+            sortTimeline();
+
+            // 입력 필드 초기화
+            locationInput.value = '';
+            memoInput.value = '';
+            photoInput.value = '';
+        }
+
+        function deleteTimelineItem(button) {
+            const item = button.closest('.timeline-item');
+            if (item) item.remove();
+        }
+
+        function sortTimeline() {
+            const timeline = document.getElementById('timeline');
+            const items = Array.from(timeline.getElementsByClassName('timeline-item'));
+            
+            items.sort((a, b) => {
+                return a.getAttribute('data-time').localeCompare(b.getAttribute('data-time'));
+            });
+            
+            items.forEach(item => timeline.appendChild(item));
+        }
+    </script>
+</body>
+</html>
