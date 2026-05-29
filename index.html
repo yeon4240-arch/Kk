@@ -3,29 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Japan Gourmet Guide - 거리 기반 추천</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <title>Japan Gourmet & Travel Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen font-sans">
 
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <h1 class="text-2xl font-bold flex items-center gap-2 text-red-500">
-                <i data-lucide="utensils-crossed"></i> 미식 가이드
+                <i data-lucide="compass"></i> 일본 여행 플래너 (실시간 편집 모드)
             </h1>
-            <div id="location-status" class="flex items-center gap-2 bg-gray-100 text-gray-600 px-4 py-2 rounded-full text-sm font-medium transition-all">
-                <i data-lucide="map-pin" class="animate-pulse text-gray-400"></i>
-                <span>위치 권한을 확인 중입니다...</span>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+                <button onclick="backupData()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1 shadow-sm transition-all">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> 백업 파일 저장
+                </button>
+                <button onclick="document.getElementById('restore-file-input').click()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1 shadow-sm transition-all">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i> 백업 복구 (가져오기)
+                </button>
+                <input type="file" id="restore-file-input" class="hidden" accept=".json,.txt" onchange="restoreData(event)">
+
+                <span class="text-gray-300">|</span>
+
+                <button onclick="openAddModal()" class="bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-1.5 shadow-md transition-all">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> 장소 추가
+                </button>
+                <div id="location-status" class="flex items-center gap-2 bg-gray-100 text-gray-600 px-4 py-2 rounded-full text-sm font-medium">
+                    <i data-lucide="map-pin" class="text-gray-400"></i>
+                    <span>위치 확인 중...</span>
+                </div>
             </div>
         </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8">
         
+        <div class="flex border-b border-gray-200 mb-6">
+            <button onclick="switchMainCategory('restaurant')" id="main-tab-restaurant" class="px-6 py-3 font-bold text-base border-b-2 border-red-500 text-red-600 flex items-center gap-2 transition-all">
+                <i data-lucide="utensils-crossed" class="w-4 h-4"></i> 맛집 탐방 🍽️
+            </button>
+            <button onclick="switchMainCategory('spot')" id="main-tab-spot" class="px-6 py-3 font-bold text-base border-b-2 border-transparent text-gray-500 hover:text-gray-900 flex items-center gap-2 transition-all">
+                <i data-lucide="map" class="w-4 h-4"></i> 추천 관광지 🗺️
+            </button>
+        </div>
+
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div class="flex bg-gray-200 p-1 rounded-xl w-fit" id="city-tabs">
-                <button onclick="switchCity('nagoya')" id="tab-nagoya" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-gray-900 shadow-xs">
+                <button onclick="switchCity('nagoya')" id="tab-nagoya" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-gray-900 shadow-sm">
                     나고야 🏯
                 </button>
                 <button onclick="switchCity('osaka')" id="tab-osaka" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-900">
@@ -40,228 +64,412 @@
             </div>
         </div>
 
-        <div id="restaurant-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            </div>
+        <div id="card-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </main>
 
+    <div id="add-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="bg-gray-950 text-white p-4 flex justify-between items-center">
+                <h2 class="font-bold flex items-center gap-1.5"><i data-lucide="plus-circle" class="text-red-400"></i> 새로운 장소 추가하기</h2>
+                <button onclick="closeAddModal()" class="text-gray-400 hover:text-white transition-colors"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">대상 도시</label>
+                    <select id="form-city" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                        <option value="nagoya">나고야 🏯</option>
+                        <option value="osaka">오사카 🐙</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">대분류 및 유형</label>
+                    <select id="form-category" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                        <option value="food">맛집 탐방 ➔ 식사 🍽️</option>
+                        <option value="dessert">맛집 탐방 ➔ 디저트/카페 ☕</option>
+                        <option value="spot">추천 관광지 🗺️</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">장소/매장 이름</label>
+                    <input type="text" id="form-name" placeholder="예: 신파치 식당 난바점" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">구글맵 평점 (0.0 ~ 5.0)</label>
+                    <input type="number" id="form-rating" step="0.1" min="0" max="5" value="4.5" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">한줄 소개 (대표 메뉴 또는 특징)</label>
+                    <input type="text" id="form-subinfo" placeholder="예: 생선구이가 맛있는 가성비 아침식사 식당" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">예상 비용 또는 입장료</label>
+                    <input type="text" id="form-price" placeholder="예: ￥800 ~ ￥1,500" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">위도 (Lat) - 생략가능</label>
+                        <input type="number" id="form-lat" step="0.0001" placeholder="34.6687" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">경도 (Lng) - 생략가능</label>
+                        <input type="number" id="form-lng" step="0.0001" placeholder="135.5013" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex gap-2">
+                <button onclick="closeAddModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 rounded-xl text-sm transition-colors">취소</button>
+                <button onclick="submitNewPlace()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-xl text-sm transition-colors shadow-sm">등록하기</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 실제 구글맵 좌표(위도 lat, 경도 lng)가 매핑된 맛집 데이터
-        const restaurants = {
-            nagoya: [
-                { name: "텐무스도코로 케시키 나고야점", category: "food", rating: 4.5, menu: "텐무스 (새우튀김 주먹밥)", price: "￥1,000 ~ ￥2,000", lat: 35.1706, lng: 136.8845, img: "https://images.unsplash.com/photo-1607301406259-dfb186e15de8?auto=format&fit=crop&w=600&q=80" },
-                { name: "야바톤 사카에 센트라이즈점", category: "food", rating: 4.2, menu: "철판 미소카츠 (된장 돈까스)", price: "￥1,500 ~ ￥2,500", lat: 35.1678, lng: 136.9069, img: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80" },
-                { name: "쿠로부타야 라무치이", category: "food", rating: 4.3, menu: "파 미소카츠", price: "￥1,500 ~ ￥2,000", lat: 35.1664, lng: 136.9063, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80" },
-                { name: "우니카와 (Unawa Meieki)", category: "food", rating: 4.6, menu: "장어구이, 히츠마부시", price: "￥3,000 ~ ￥5,000", lat: 35.1724, lng: 136.8861, img: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=600&q=80" },
-                { name: "라멘 레스토랑 우조무조 오스점", category: "food", rating: 4.1, menu: "특제 차슈 라멘", price: "￥1,000 ~ ￥2,000", lat: 35.1594, lng: 136.9019, img: "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=600&q=80" },
-                { name: "멘야 시시마루", category: "food", rating: 4.5, menu: "백탕 라멘 (토리파이탄)", price: "￥900 ~ ￥1,500", lat: 35.1752, lng: 136.8824, img: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80" },
-                { name: "Tsubame Bread & milk 메이에키점", category: "dessert", rating: 4.2, menu: "단팥 버터 토스트", price: "￥500 ~ ￥1,500", lat: 35.1669, lng: 136.8872, img: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80" },
-                { name: "텐무스도코로 케시키 나고야본점", category: "food", rating: 4.4, menu: "원조 수제 텐무스", price: "￥1,000 ~ ￥2,000", lat: 35.1852, lng: 136.8614, img: "https://images.unsplash.com/photo-1534482421-64566f976cfa?auto=format&fit=crop&w=600&q=80" },
-                { name: "히츠마부시 하나오카", category: "food", rating: 4.7, menu: "나고야식 장어덮밥", price: "￥3,500 ~ ￥5,000", lat: 35.1691, lng: 136.9081, img: "https://images.unsplash.com/photo-1626200419199-391ae4be7a40?auto=format&fit=crop&w=600&q=80" },
-                { name: "멘야신메이 사카에스카이루점", category: "food", rating: 4.0, menu: "돈코츠 이에케이 라멘", price: "￥850 ~ ￥1,300", lat: 35.1667, lng: 136.9056, img: "https://images.unsplash.com/photo-1557872943-16a5ac26437e?auto=format&fit=crop&w=600&q=80" },
-                { name: "카페 본본 (Bonbon)", category: "dessert", rating: 4.1, menu: "레트로 조각 케이크 & 푸딩", price: "￥600 ~ ￥1,200", lat: 35.1762, lng: 136.9168, img: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80" },
-                { name: "요시미츠 (Yoshimitsu)", category: "dessert", rating: 4.4, menu: "와라비모찌 (전통 떡)", price: "￥500 ~ ￥1,500", lat: 35.1884, lng: 136.9312, img: "https://images.unsplash.com/photo-1582730147233-cbd81137f980?auto=format&fit=crop&w=600&q=80" },
-                { name: "하브스 (HARBS) 사카에본점", category: "dessert", rating: 4.3, menu: "밀크 크레이프 케이크", price: "￥1,000 ~ ￥2,000", lat: 35.1684, lng: 136.9074, img: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=600&q=80" },
-                { name: "미셸 블랑 (Michel Belin)", category: "dessert", rating: 4.3, menu: "고급 프랑스식 디저트", price: "￥1,000 ~ ￥2,500", lat: 35.1708, lng: 136.8829, img: "https://images.unsplash.com/photo-1569864358642-9d1684040f43?auto=format&fit=crop&w=600&q=80" },
-                { name: "코메다 커피 BINO 사카에점", category: "dessert", rating: 3.8, menu: "시로노와르 & 모닝커피", price: "￥500 ~ ￥1,000", lat: 35.1693, lng: 136.9067, img: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80" }
-            ],
-            osaka: [
-                { name: "규카츠 모토무라 난바점", category: "food", rating: 4.8, menu: "규카츠 정식", price: "￥1,500 ~ ￥3,000", lat: 34.6644, lng: 135.5019, img: "https://images.unsplash.com/photo-1615557960901-f2923e417fb1?auto=format&fit=crop&w=600&q=80" },
-                { name: "규카츠 가츠규 난바센니치마에점", category: "food", rating: 4.7, menu: "살치살 규카츠 정식", price: "￥1,500 ~ ￥2,500", lat: 34.6651, lng: 135.5033, img: "https://images.unsplash.com/photo-1611143669185-af224c5e3252?auto=format&fit=crop&w=600&q=80" },
-                { name: "아지노야 오코노미야끼", category: "food", rating: 4.3, menu: "믹스 오코노미야끼", price: "￥1,000 ~ ￥2,500", lat: 34.6675, lng: 135.5011, img: "https://images.unsplash.com/photo-1625938146369-adc83368bda7?auto=format&fit=crop&w=600&q=80" },
-                { name: "grenier (그르니에) 우메다점", category: "dessert", rating: 4.5, menu: "커스터드 크림 밀푀유", price: "￥600 ~ ￥1,200", lat: 34.7032, lng: 135.4988, img: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80" },
-                { name: "쇼콜라티에 팔레 도르 오사카점", category: "dessert", rating: 4.4, menu: "초콜릿 파르페", price: "￥1,500 ~ ￥3,000", lat: 34.6997, lng: 135.4947, img: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80" },
-                { name: "키르훼봉 그랜드 프론트 오사카점", category: "dessert", rating: 4.2, menu: "제철 과일 타르트", price: "￥800 ~ ￥1,500", lat: 34.7041, lng: 135.4944, img: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=600&q=80" },
-                { name: "하브스 다이마루 우메다점", category: "dessert", rating: 4.2, menu: "밀 크레이프 케이크", price: "￥1,000 ~ ￥2,000", lat: 34.7022, lng: 135.4972, img: "https://images.unsplash.com/photo-1569864358642-9d1684040f43?auto=format&fit=crop&w=600&q=80" },
-                { name: "가리겟토 (GARIGUETTE) 오사카점", category: "dessert", rating: 4.0, menu: "원형 밀프레쎄", price: "￥1,000 ~ ￥1,800", lat: 34.7047, lng: 135.4942, img: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80" }
-            ]
+        // 기본 뼈대 고정형 가이드 데이터
+        const defaultDb = {
+            restaurant: {
+                nagoya: [
+                    { id: "n_r1", name: "아츠타 호라이켄 본점", category: "food", rating: 4.5, subInfo: "명물 히츠마부시 (장어덮밥)", price: "￥4,000 ~ ￥6,000", lat: 35.1201, lng: 136.9068, img: "https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r2", name: "미센 이마이케 본점", category: "food", rating: 4.0, subInfo: "원조 타이완 라멘", price: "￥1,000 ~ ￥2,000", lat: 35.1678, lng: 136.9359, img: "https://images.unsplash.com/photo-1653033516104-cf8705f32bf5?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r3", name: "세카이노 야마짱 본점", category: "food", rating: 3.9, subInfo: "바삭한 테바사키 (닭날개 튀김)", price: "￥2,000 ~ ￥3,000", lat: 35.1680, lng: 136.9134, img: "https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r4", name: "야바톤 사카에 센트라이즈점", category: "food", rating: 4.3, subInfo: "진한 소스의 철판 미소카츠", price: "￥1,500 ~ ￥2,500", lat: 35.1678, lng: 136.9069, img: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r5", name: "텐무스도코로 케시키 나고야역점", category: "food", rating: 4.4, subInfo: "한 입 크기 프리미엄 텐무스(새우튀김 주먹밥)", price: "￥600 ~ ￥1,200", lat: 35.1706, lng: 136.8816, img: "https://images.unsplash.com/photo-1534482421-64566f976cfa?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r6", name: "텐무스도코로 케시키 나고야본점", category: "food", rating: 4.5, subInfo: "전통 수제 방식의 원조 풍미 텐무스", price: "￥600 ~ ￥1,500", lat: 35.1742, lng: 136.8950, img: "https://images.unsplash.com/photo-1534482421-64566f976cfa?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r7", name: "라무치이", category: "food", rating: 4.4, subInfo: "파가 듬뿍 올라간 파된장돈카츠 명가", price: "￥1,500 ~ ￥2,500", lat: 35.1664, lng: 136.9072, img: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r13", name: "신파치 식당 나고야점", category: "food", rating: 4.3, subInfo: "숯불에 제대로 구워낸 생선구이 정식 맛집", price: "￥800 ~ ￥1,500", lat: 35.1712, lng: 136.8845, img: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_r14", name: "치이카와 라멘 타로 나고야점", category: "food", rating: 4.7, subInfo: "초인기 캐릭터 치이카와 컨셉 테마 라멘", price: "￥1,200 ~ ￥2,000", lat: 35.1672, lng: 136.9080, img: "https://images.unsplash.com/photo-1653033516104-cf8705f32bf5?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_c4", name: "하브스 (HARBS) 사카에본점", category: "dessert", rating: 4.4, subInfo: "밀크 크레이프 과일 케이크의 본점 원조 맛", price: "￥1,000 ~ ￥2,000", lat: 35.1684, lng: 136.9074, img: "https://images.unsplash.com/photo-1505253149613-112d21d9f6a9?auto=format&fit=crop&w=600&q=80" }
+                ],
+                osaka: [
+                    { id: "o_r1", name: "오코노미야키 미즈노", category: "food", rating: 4.2, subInfo: "야마이모야키 (마 오코노미야키 전문점)", price: "￥1,500 ~ ￥3,000", lat: 34.6683, lng: 135.5032, img: "https://images.unsplash.com/photo-1625938146369-adc83368bda7?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r2", name: "쿠시카츠 다루마 신세카이 총본점", category: "food", rating: 4.1, subInfo: "소스 두번 찍기 금지! 원조 쿠시카츠", price: "￥2,000 ~ ￥3,000", lat: 34.6515, lng: 135.5062, img: "https://images.unsplash.com/photo-1627581297184-e9185a864dcb?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r3", name: "타코야키도라쿠 와나카 센니치마에점", category: "food", rating: 4.3, subInfo: "미쉐린 가이드에 소개된 겉바속촉 타코야키", price: "￥500 ~ ￥1,000", lat: 34.6652, lng: 135.5033, img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r4", name: "타코야끼 긴다코 난바 오타로드점", category: "food", rating: 4.2, subInfo: "기름에 튀기듯 구워 바삭함이 특징인 긴다코", price: "￥600 ~ ￥1,200", lat: 34.6612, lng: 135.5048, img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r5", name: "국산우 완간 야키니쿠 보쿠라 난바점", category: "food", rating: 4.6, subInfo: "가성비 극강의 고품질 소고기 야키니쿠 무한리필", price: "￥4,000 ~ ￥6,000", lat: 34.6672, lng: 135.5011, img: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r6", name: "스시치토세 (Sushi Chitose)", category: "food", rating: 4.8, subInfo: "구글 평점이 증명하는 예약 필수 장인 오마카세", price: "￥5,000 ~ ￥10,000", lat: 34.6508, lng: 135.5085, img: "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r7", name: "멘야 죠쿠 (Menya Joku)", category: "food", rating: 4.4, subInfo: "가쓰오부시 베이스의 깊은 감칠맛 소유라멘", price: "￥900 ~ ￥1,500", lat: 34.6735, lng: 135.5061, img: "https://images.unsplash.com/photo-1653033516104-cf8705f32bf5?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r8", name: "신파치 식당 신사이바시점", category: "food", rating: 4.3, subInfo: "갓 구운 생선구이 정식을 파는 아침식사 명소", price: "￥800 ~ ￥1,500", lat: 34.6721, lng: 135.5015, img: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r9", name: "무기토 멘스 (Mugi to Mens)", category: "food", rating: 4.3, subInfo: "세련된 육수 배합이 일품인 우메다 라멘 명가", price: "￥1,000 ~ ￥1,600", lat: 34.7085, lng: 135.4991, img: "https://images.unsplash.com/photo-1653033516104-cf8705f32bf5?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_r10", name: "카츠쿠라 우메다 지챠마치점", category: "food", rating: 4.4, subInfo: "육즙 가득한 바삭바삭 프리미엄 돈카츠 전문점", price: "￥2,000 ~ ￥3,500", lat: 34.7061, lng: 135.4975, img: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_c1", name: "grenier (그르니에) 우메다점", category: "dessert", rating: 4.5, subInfo: "바삭한 밀푀유 시트에 고소한 커스터드 크림", price: "￥600 ~ ￥1,200", lat: 34.7032, lng: 135.4988, img: "https://images.unsplash.com/photo-1511018556340-d16986a1c194?auto=format&fit=crop&w=600&q=80" }
+                ]
+            },
+            spot: {
+                nagoya: [
+                    { id: "n_s1", name: "나고야 성", category: "spot", rating: 4.5, subInfo: "아름다운 금빛 물고기 천수각이 상징인 성", price: "입장료 ￥500", lat: 35.1855, lng: 136.9016, img: "https://images.unsplash.com/photo-1601058334415-373f76da05f3?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_s2", name: "오아시스 21", category: "spot", rating: 4.3, subInfo: "물의 우주선 루프탑 야경이 빛나는 모던 건축", price: "무료 입장", lat: 35.1709, lng: 136.9103, img: "https://images.unsplash.com/photo-1570211776045-af3a51026f4a?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_s3", name: "오스 상점가", category: "spot", rating: 4.2, subInfo: "다양한 길거리 음식과 아케이드 쇼핑 스트리트", price: "자유 관광", lat: 35.1593, lng: 136.9031, img: "https://images.unsplash.com/photo-1542931287-023b922fa89b?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_s4", name: "지브리 파크", category: "spot", rating: 4.8, subInfo: "지브리 스튜디오 영화 속 풍경을 재현한 파크", price: "예약제 요금", lat: 35.1711, lng: 137.0886, img: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_s5", name: "나고야항 수족관", category: "spot", rating: 4.6, subInfo: "거대한 대형 돌고래 쇼와 범고래를 만나는 명소", price: "입장료 ￥2,030", lat: 35.0906, lng: 136.8781, img: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_s6", name: "레고랜드 재팬", category: "spot", rating: 4.2, subInfo: "아이들과 가기 좋은 아기자기한 레고 테마파크", price: "시즌별 상이", lat: 35.0506, lng: 136.8436, img: "https://images.unsplash.com/photo-1542931287-023b922fa89b?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_s9", name: "나고야 미라이타워 (TV타워)", category: "spot", rating: 4.3, subInfo: "공원 한가운데 솟아오른 원조 도시 전망대 탑", price: "입장료 ￥1,300", lat: 35.1724, lng: 136.9084, img: "https://images.unsplash.com/photo-1570211776045-af3a51026f4a?auto=format&fit=crop&w=600&q=80" },
+                    { id: "n_s10", name: "아츠타 신궁", category: "spot", rating: 4.4, subInfo: "울창한 삼나무 숲에 둘러싸인 조용한 대형 신사", price: "무료 입장", lat: 35.1257, lng: 136.9091, img: "https://images.unsplash.com/photo-1601058334415-373f76da05f3?auto=format&fit=crop&w=600&q=80" }
+                ],
+                osaka: [
+                    { id: "o_s1", name: "도톤보리", category: "spot", rating: 4.7, subInfo: "글리코상 전광판 인증샷 필수인 화려한 오사카 중심가", price: "자유 관광", lat: 34.6687, lng: 135.5013, img: "https://images.unsplash.com/photo-1590559899731-a3828dfc515c?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_s2", name: "오사카 성", category: "spot", rating: 4.6, subInfo: "거대한 성곽และ 아름다운 정원이 펼쳐진 랜드마크", price: "천수각 ￥600", lat: 34.6873, lng: 135.5262, img: "https://images.unsplash.com/photo-1569429545934-8c886ca48df3?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_s3", name: "유니버설 스튜디오 재팬 (USJ)", category: "spot", rating: 4.9, subInfo: "닌텐도 월드와 해리포터 등 최고의 영화 어트랙션 파크", price: "패스권 변동", lat: 34.6654, lng: 135.4323, img: "https://images.unsplash.com/photo-1642177303023-e7f09bf2187b?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_s4", name: "우메다 스카이 빌딩", category: "spot", rating: 4.6, subInfo: "360도 야경을 탁 트인 야외에서 감상하는 공중정원", price: "입장료 ￥1,500", lat: 34.7053, lng: 135.4904, img: "https://images.unsplash.com/photo-1545249390-6bdfa286032f?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_s5", name: "하루카스 300", category: "spot", rating: 4.8, subInfo: "일본 초고층 통유리창으로 오사카 전체를 품는 곳", price: "입장료 ￥2,000", lat: 34.6458, lng: 135.5139, img: "https://images.unsplash.com/photo-1545249390-6bdfa286032f?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_s6", name: "카이유칸 수족관", category: "spot", rating: 4.6, subInfo: "거대한 고래상어가 살아 숨쉬는 초대형 해양 박물관", price: "입장료 ￥2,700", lat: 34.6545, lng: 135.4289, img: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80" },
+                    { id: "o_s7", name: "츠텐카쿠 & 신세카이", category: "spot", rating: 4.1, subInfo: "복고풍 전탑과 화려한 옛 쿠시카츠 간판 골목들", price: "전망대 ￥1,000", lat: 34.6525, lng: 135.5063, img: "https://images.unsplash.com/photo-1590559899731-a3828dfc515c?auto=format&fit=crop&w=600&q=80" }
+                ]
+            }
         };
 
-        // 기본 기준 좌표값 (유저가 위치 거부 시 사용할 나고야/오사카 중심점)
         const CITY_CENTERS = {
             nagoya: { lat: 35.1709, lng: 136.8815 },
             osaka: { lat: 34.7024, lng: 135.4959 }
         };
 
-        let userLocation = null; // 실시간 유저 좌표 저장 변수
+        let userLocation = null; 
+        let currentMainCategory = 'restaurant'; 
         let currentCity = 'nagoya';
         let currentFilter = 'all';
+        let customDb = { restaurant: { nagoya: [], osaka: [] }, spot: { nagoya: [], osaka: [] } };
 
-        // 하베신 공식(Haversine Formula)으로 실제 직선거리 계산 (km 단위 리턴)
+        // 로컬스토리지 연동 로드
+        function loadFromLocalStorage() {
+            if (localStorage.getItem('user_custom_places')) {
+                try { customDb = JSON.parse(localStorage.getItem('user_custom_places')); } catch(e) {}
+            }
+        }
+        loadFromLocalStorage();
+
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // 지구 반지름 (km)
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // 거리 가독성 포맷팅 기능 (100m 미만, m, km 변환)
         function formatDistance(km) {
-            if (km < 0.1) {
-                return `${Math.round(km * 1000)}m`;
-            } else if (km < 1) {
-                return `${Math.round(km * 1000)}m`;
-            } else {
-                return `${km.toFixed(1)}km`;
-            }
+            if (km < 1) return `${Math.round(km * 1000)}m`;
+            return `${km.toFixed(1)}km`;
         }
 
-        // 브라우저 GPS 기반 위치 탐색
-        function initLocationServices() {
-            const statusEl = document.getElementById('location-status');
-            
-            if (!navigator.geolocation) {
-                statusEl.className = "flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-medium";
-                statusEl.innerHTML = `<i data-lucide="alert-circle"></i><span>위치 정보가 지원되지 않는 환경입니다.</span>`;
-                lucide.createIcons();
-                renderCards();
+        function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); }
+        function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
+
+        // 장소 직접 추가 엔진
+        function submitNewPlace() {
+            const city = document.getElementById('form-city').value;
+            const category = document.getElementById('form-category').value;
+            const name = document.getElementById('form-name').value.trim();
+            const rating = parseFloat(document.getElementById('form-rating').value) || 4.5;
+            const subInfo = document.getElementById('form-subinfo').value.trim();
+            const price = document.getElementById('form-price').value.trim();
+            const lat = parseFloat(document.getElementById('form-lat').value) || CITY_CENTERS[city].lat;
+            const lng = parseFloat(document.getElementById('form-lng').value) || CITY_CENTERS[city].lng;
+
+            if(!name || !subInfo) {
+                alert("상호명과 한줄 소개는 필수 입력 항목입니다.");
                 return;
             }
 
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    userLocation = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    };
+            const mainCat = (category === 'spot') ? 'spot' : 'restaurant';
+            const defaultImages = {
+                food: "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=600&q=80",
+                dessert: "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=600&q=80",
+                spot: "https://images.unsplash.com/photo-1542931287-023b922fa89b?auto=format&fit=crop&w=600&q=80"
+            };
 
-                    // 가까운 도시 분석 후 자동 탭 선택
-                    const distToNagoya = calculateDistance(userLocation.lat, userLocation.lng, CITY_CENTERS.nagoya.lat, CITY_CENTERS.nagoya.lng);
-                    const distToOsaka = calculateDistance(userLocation.lat, userLocation.lng, CITY_CENTERS.osaka.lat, CITY_CENTERS.osaka.lng);
+            const newPlace = {
+                id: "custom_" + Date.now(),
+                name: name,
+                category: category,
+                rating: rating,
+                subInfo: subInfo,
+                price: price || "￥1,000 ~",
+                lat: lat,
+                lng: lng,
+                img: defaultImages[category]
+            };
 
-                    if (distToNagoya < distToOsaka) {
-                        currentCity = 'nagoya';
-                        statusEl.innerHTML = `<i data-lucide="check-circle-2" class="text-emerald-500"></i><span>현재 위치 기준 <b>나고야</b> 매장 정렬 완료!</span>`;
-                    } else {
-                        currentCity = 'osaka';
-                        statusEl.innerHTML = `<i data-lucide="check-circle-2" class="text-emerald-500"></i><span>현재 위치 기준 <b>오사카</b> 매장 정렬 완료!</span>`;
-                    }
-                    statusEl.className = "flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full text-sm font-medium border border-emerald-200";
-                    
-                    updateTabUI();
-                    renderCards();
-                },
-                (error) => {
-                    // 위치 정보 거부 시 기본 가이드 메시지 표기
-                    statusEl.className = "flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-full text-sm font-medium border border-amber-200";
-                    statusEl.innerHTML = `<i data-lucide="info"></i><span>위치 미승인 (각 도시역 중심 기준 거리 표시)</span>`;
-                    renderCards();
-                }
-            );
+            customDb[mainCat][city].push(newPlace);
+            localStorage.setItem('user_custom_places', JSON.stringify(customDb));
+
+            alert(`'${name}'이(가) 리스트에 추가되었습니다!`);
+            closeAddModal();
+            renderCards();
         }
 
-        // 상단 도시 탭 디자인 제어
-        function updateTabUI() {
-            ['nagoya', 'osaka'].forEach(city => {
-                const tab = document.getElementById(`tab-${city}`);
-                if (city === currentCity) {
-                    tab.className = "px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-gray-900 shadow-xs";
+        // 장소 삭제
+        function deletePlace(id, mainCat, city) {
+            if (confirm("🚨 선택하신 장소를 가이드 리스트에서 삭제하시겠습니까?")) {
+                if (id.startsWith('custom_')) {
+                    customDb[mainCat][city] = customDb[mainCat][city].filter(item => item.id !== id);
+                    localStorage.setItem('user_custom_places', JSON.stringify(customDb));
                 } else {
-                    tab.className = "px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-900";
+                    let deletedList = JSON.parse(localStorage.getItem('deleted_places') || '[]');
+                    deletedList.push(id);
+                    localStorage.setItem('deleted_places', JSON.stringify(deletedList));
                 }
-            });
+                renderCards();
+            }
+        }
+
+        // --- 💾 1. 전체 백업 파일 추출 기능 (내보내기) ---
+        function backupData() {
+            // 브라우저 로컬스토리지에 들어있는 유저 데이터 수집
+            const backupObject = {
+                version: "1.0",
+                exportDate: new Date().toISOString(),
+                user_custom_places: localStorage.getItem('user_custom_places') || '{"restaurant":{"nagoya":[],"osaka":[]},"spot":{"nagoya":[],"osaka":[]}}',
+                deleted_places: localStorage.getItem('deleted_places') || '[]',
+                memos: {}
+            };
+
+            // 모든 메모 데이터 통합 수집
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('memo_')) {
+                    backupObject.memos[key] = localStorage.getItem(key);
+                }
+            }
+
+            // 파일화 및 다운로드 유도
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObject, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Japan_Trip_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // --- 📂 2. 백업 파일 복구 기능 (가져오기) ---
+        function restoreData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (!importedData.user_custom_places || !importedData.deleted_places) {
+                        alert("⚠️ 유효하지 않은 백업 파일 양식입니다.");
+                        return;
+                    }
+
+                    if (confirm("📂 백업 파일을 불러오시겠습니까? 기존에 이 브라우저에 기록되어 있던 임시 데이터는 대체됩니다.")) {
+                        // 1. 기존 메모 청소
+                        for (let i = localStorage.length - 1; i >= 0; i--) {
+                            const key = localStorage.key(i);
+                            if (key && (key.startsWith('memo_') || key === 'user_custom_places' || key === 'deleted_places')) {
+                                localStorage.removeItem(key);
+                            }
+                        }
+
+                        // 2. 새 데이터 할당 저장
+                        localStorage.setItem('user_custom_places', importedData.user_custom_places);
+                        localStorage.setItem('deleted_places', importedData.deleted_places);
+                        
+                        if (importedData.memos) {
+                            Object.keys(importedData.memos).forEach(key => {
+                                localStorage.setItem(key, importedData.memos[key]);
+                            });
+                        }
+
+                        // 3. 앱 변수 동기화 및 재랜더링
+                        loadFromLocalStorage();
+                        renderCards();
+                        alert("✨ 성공적으로 백업 데이터가 복구되었습니다!");
+                    }
+                } catch (err) {
+                    alert("🚫 파일을 읽는 중 오류가 발생했습니다. 올바른 json/txt 파일인지 확인해 주세요.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // 파일 인풋 초기화
+        }
+
+        function switchMainCategory(mainCat) {
+            currentMainCategory = mainCat;
+            const resBtn = document.getElementById('main-tab-restaurant');
+            const spotBtn = document.getElementById('main-tab-spot');
+            document.getElementById('category-filters').style.display = (mainCat === 'restaurant') ? 'flex' : 'none';
+
+            if (mainCat === 'restaurant') {
+                resBtn.className = "px-6 py-3 font-bold text-base border-b-2 border-red-500 text-red-600 flex items-center gap-2 transition-all";
+                spotBtn.className = "px-6 py-3 font-bold text-base border-b-2 border-transparent text-gray-500 hover:text-gray-900 flex items-center gap-2 transition-all";
+            } else {
+                spotBtn.className = "px-6 py-3 font-bold text-base border-b-2 border-red-500 text-red-600 flex items-center gap-2 transition-all";
+                resBtn.className = "px-6 py-3 font-bold text-base border-b-2 border-transparent text-gray-500 hover:text-gray-900 flex items-center gap-2 transition-all";
+            }
+            renderCards();
         }
 
         function switchCity(city) {
             currentCity = city;
-            updateTabUI();
+            ['nagoya', 'osaka'].forEach(c => {
+                document.getElementById(`tab-${c}`).className = (c === city) 
+                    ? "px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-gray-900 shadow-sm" 
+                    : "px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-900";
+            });
             renderCards();
         }
 
         function filterCategory(category) {
             currentFilter = category;
             ['all', 'food', 'dessert'].forEach(f => {
-                const filterBtn = document.getElementById(`filter-${f}`);
-                if (f === category) {
-                    filterBtn.className = "px-4 py-2 rounded-lg text-xs font-bold border border-red-500 bg-red-50 text-red-600 transition-all";
-                } else {
-                    filterBtn.className = "px-4 py-2 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-600 hover:border-gray-300 transition-all";
-                }
+                document.getElementById(`filter-${f}`).className = (f === category)
+                    ? "px-4 py-2 rounded-lg text-xs font-bold border border-red-500 bg-red-50 text-red-600 transition-all"
+                    : "px-4 py-2 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-600 hover:border-gray-300 transition-all";
             });
             renderCards();
         }
 
-        // 동적 카드 리스트 생성 및 정렬 렌더링 함수
         function renderCards() {
-            const grid = document.getElementById('restaurant-grid');
+            const grid = document.getElementById('card-grid');
             grid.innerHTML = '';
 
-            // 기준이 될 중심 좌표 설정 (유저 GPS 정보가 있으면 유저 좌표 사용, 없으면 일본 해당 도시역 중심 사용)
             const baseLat = userLocation ? userLocation.lat : CITY_CENTERS[currentCity].lat;
             const baseLng = userLocation ? userLocation.lng : CITY_CENTERS[currentCity].lng;
 
-            // 1. 선택된 도시의 매장들에 대해 거리 계산 적용
-            let list = restaurants[currentCity].map(shop => {
-                const dist = calculateDistance(baseLat, baseLng, shop.lat, shop.lng);
-                return { ...shop, distance: dist };
+            let rawList = [...defaultDb[currentMainCategory][currentCity], ...customDb[currentMainCategory][currentCity]];
+            let deletedList = JSON.parse(localStorage.getItem('deleted_places') || '[]');
+            rawList = rawList.filter(item => !deletedList.includes(item.id));
+
+            let list = rawList.map(item => {
+                const dist = calculateDistance(baseLat, baseLng, item.lat, item.lng);
+                return { ...item, distance: dist };
             });
 
-            // 2. 카테고리 필터링 거치기
-            if (currentFilter !== 'all') {
+            if (currentMainCategory === 'restaurant' && currentFilter !== 'all') {
                 list = list.filter(item => item.category === currentFilter);
             }
 
-            // 3. 내 위치에서 가장 가까운 최단거리 순서대로 정렬(Sort)
             list.sort((a, b) => a.distance - b.distance);
 
-            if(list.length === 0) {
-                grid.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400">조건에 부합하는 매장이 없습니다.</div>`;
-                return;
-            }
-
-            // 4. 카드 컴포넌트 브라우저 화면에 주입
-            list.forEach((shop, index) => {
+            list.forEach((shop) => {
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col relative";
+                card.className = "bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md flex flex-col relative";
                 
-                // 가장 가까운 1등 매장 강조 마크업
-                const distanceBadge = index === 0 && userLocation 
-                    ? `<span class="bg-emerald-500 text-white text-3xs px-2 py-0.5 rounded font-bold flex items-center gap-0.5"><i data-lucide="navigation" class="w-2.5 h-2.5 fill-white"></i>최근접</span>` 
-                    : '';
+                const mapLink = `http://googleusercontent.com/maps.google.com/maps?q=${encodeURIComponent(shop.name + " " + (currentCity === 'nagoya' ? '나고야' : '오사카'))}`;
+                const memoKey = `memo_${shop.id}`;
+                const savedMemo = localStorage.getItem(memoKey) || '';
 
                 card.innerHTML = `
-                    <div class="relative overflow-hidden h-48 bg-gray-100">
-                        <img src="${shop.img}" alt="${shop.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                        <div class="absolute top-3 left-3 flex gap-1.5 items-center">
-                            <span class="px-2.5 py-1 text-2xs font-extrabold rounded-md shadow-xs ${shop.category === 'food' ? 'bg-orange-500 text-white' : 'bg-pink-500 text-white'}">
-                                ${shop.category === 'food' ? '식사' : '디저트'}
+                    <div class="relative overflow-hidden h-48 bg-gray-100 block group">
+                        <img src="${shop.img}" alt="${shop.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='https://images.unsplash.com/photo-1542931287-023b922fa89b?auto=format&fit=crop&w=600&q=80'">
+                        <div class="absolute top-3 left-3 flex gap-1.5 items-center z-20">
+                            <span class="px-2.5 py-1 text-[10px] font-extrabold rounded-md shadow-sm ${shop.category === 'food' ? 'bg-orange-500 text-white' : shop.category === 'dessert' ? 'bg-pink-500 text-white' : 'bg-indigo-600 text-white'}">
+                                ${shop.category === 'food' ? '식사 🍽️' : shop.category === 'dessert' ? '디저트 ☕' : '관광 명소 🗺️'}
                             </span>
                         </div>
-                        <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-xs text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                        <button onclick="deletePlace('${shop.id}', '${currentMainCategory}', '${currentCity}')" class="absolute top-3 right-3 bg-red-600 text-white p-2 rounded-xl hover:bg-red-700 shadow-md z-20 transition-all flex items-center justify-center">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                        <div class="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 z-20">
                             <i data-lucide="footprints" class="w-3.5 h-3.5 text-red-400"></i>
                             <span>${formatDistance(shop.distance)}</span>
                         </div>
                     </div>
-                    <div class="p-5 flex-1 flex flex-col justify-between">
+                    <div class="p-5 flex-1 flex flex-col justify-between gap-4">
                         <div>
                             <div class="flex items-center justify-between mb-1">
                                 <div class="flex items-center gap-1.5 text-amber-500 text-sm font-bold">
-                                    <i data-lucide="star" class="w-4 h-4 fill-amber-500"></i>
+                                    <i data-lucide="star" class="w-4 h-4 text-amber-500 fill-amber-500"></i>
                                     <span>${shop.rating.toFixed(1)}</span>
                                 </div>
-                                ${distanceBadge}
+                                <a href="${mapLink}" target="_blank" rel="noopener noreferrer" class="text-xs text-red-500 font-bold hover:underline flex items-center gap-0.5">
+                                    <i data-lucide="map-pinned" class="w-3.5 h-3.5"></i> 구글맵 길찾기
+                                </a>
                             </div>
-                            <h3 class="text-base font-bold text-gray-900 tracking-tight line-clamp-1 mb-2">${shop.name}</h3>
-                            <p class="text-sm text-gray-600 flex items-center gap-1 mb-1.5">
-                                <span class="text-gray-400 font-medium">메뉴:</span> ${shop.menu}
-                            </p>
+                            <h3 class="text-base font-bold text-gray-900 line-clamp-1 mb-2">${shop.name}</h3>
+                            <p class="text-sm text-gray-600 mb-1.5"><span class="text-gray-400 font-medium">소개:</span> ${shop.subInfo}</p>
+                            <div class="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 mb-2">
+                                <span>예산 / 비용</span>
+                                <span class="font-bold text-gray-700 text-sm">${shop.price}</span>
+                            </div>
                         </div>
-                        <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-                            <span class="flex items-center gap-1"><i data-lucide="wallet" class="w-3.5 h-3.5"></i> 예산 범위</span>
-                            <span class="font-bold text-gray-700 text-sm">${shop.price}</span>
+
+                        <div class="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 text-xs">
+                            <div class="font-bold text-amber-800 flex items-center gap-1 mb-1.5"><i data-lucide="sticky-note" class="w-3.5 h-3.5 text-amber-600"></i> 개인 여행 계획 메모</div>
+                            <textarea id="textarea-${shop.id}" rows="2" class="w-full bg-white border border-amber-200 rounded-lg p-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 font-medium resize-none" placeholder="방문 꿀팁 및 정기 휴무일 등을 메모해두세요.">${savedMemo}</textarea>
+                            <button onclick="localStorage.setItem('memo_${shop.id}', document.getElementById('textarea-${shop.id}').value.trim()); alert('메모가 저장되었습니다!');" class="w-full mt-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-1 rounded-lg transition-colors flex items-center justify-center gap-1">저장하기</button>
                         </div>
                     </div>
                 `;
                 grid.appendChild(card);
             });
-            
-            // 화면 내 아이콘 렌더링 리프레시
             lucide.createIcons();
         }
 
         window.onload = () => {
-            initLocationServices();
+            const statusEl = document.getElementById('location-status');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    statusEl.innerHTML = `<i data-lucide="check" class="text-emerald-500"></i> <span>위치 정렬 켜짐</span>`;
+                    renderCards();
+                }, () => {
+                    statusEl.innerHTML = `<span>기본 정렬 모드</span>`;
+                    renderCards();
+                });
+            } else { renderCards(); }
         };
     </script>
 </body>
